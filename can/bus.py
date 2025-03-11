@@ -9,6 +9,7 @@ from abc import ABC, ABCMeta, abstractmethod
 from enum import Enum, auto
 from time import time
 from types import TracebackType
+import json
 from typing import (
     Any,
     Callable,
@@ -107,7 +108,7 @@ class BusABC(metaclass=ABCMeta):
     def __str__(self) -> str:
         return self.channel_info
 
-    def recv(self, timeout: Optional[float] = None) -> Optional[Message]:
+    def recv(self,arbcallback: Any, timeout: Optional[float] = None) -> Optional[Message]:
         """Block waiting for a message from the Bus.
 
         :param timeout:
@@ -122,31 +123,32 @@ class BusABC(metaclass=ABCMeta):
         start = time()
         time_left = timeout
 
-        while True:
-            # try to get a message
-            msg, already_filtered = self._recv_internal(timeout=time_left)
+        #while True:
+        # try to get a message
+        #msg, already_filtered = 
+        self._recv_internal(arbcallback,timeout=time_left)
 
-            # return it, if it matches
-            if msg and (already_filtered or self._matches_filters(msg)):
-                LOG.log(self.RECV_LOGGING_LEVEL, "Received: %s", msg)
-                return msg
+        # return it, if it matches
+        #if msg and (already_filtered or self._matches_filters(msg)):
+        #    LOG.log(self.RECV_LOGGING_LEVEL, "Received: %s", msg)
+        #    return msg
 
-            # if not, and timeout is None, try indefinitely
-            elif timeout is None:
-                continue
+        # if not, and timeout is None, try indefinitely
+        #elif timeout is None:
+        #    continue
 
-            # try next one only if there still is time, and with
-            # reduced timeout
-            else:
-                time_left = timeout - (time() - start)
+        # try next one only if there still is time, and with
+        # reduced timeout
+        #else:
+        #time_left = timeout - (time() - start)
 
-                if time_left > 0:
-                    continue
+        #if time_left > 0:
+        #    continue
 
-                return None
+        #return None
 
     def _recv_internal(
-        self, timeout: Optional[float]
+        self, arbcallback: str, timeout: Optional[float]
     ) -> Tuple[Optional[Message], bool]:
         """
         Read a message from the bus and tell whether it was filtered.
@@ -215,7 +217,6 @@ class BusABC(metaclass=ABCMeta):
         period: float,
         duration: Optional[float] = None,
         store_task: bool = True,
-        autostart: bool = True,
         modifier_callback: Optional[Callable[[Message], None]] = None,
     ) -> can.broadcastmanager.CyclicSendTaskABC:
         """Start sending messages at a given period on this bus.
@@ -238,10 +239,6 @@ class BusABC(metaclass=ABCMeta):
         :param store_task:
             If True (the default) the task will be attached to this Bus instance.
             Disable to instead manage tasks manually.
-        :param autostart:
-            If True (the default) the sending task will immediately start after creation.
-            Otherwise, the task has to be started by calling the
-            tasks :meth:`~can.RestartableCyclicTaskABC.start` method on it.
         :param modifier_callback:
             Function which should be used to modify each message's data before
             sending. The callback modifies the :attr:`~can.Message.data` of the
@@ -277,9 +274,7 @@ class BusABC(metaclass=ABCMeta):
         # Create a backend specific task; will be patched to a _SelfRemovingCyclicTask later
         task = cast(
             _SelfRemovingCyclicTask,
-            self._send_periodic_internal(
-                msgs, period, duration, autostart, modifier_callback
-            ),
+            self._send_periodic_internal(msgs, period, duration, modifier_callback),
         )
         # we wrap the task's stop method to also remove it from the Bus's list of tasks
         periodic_tasks = self._periodic_tasks
@@ -306,7 +301,6 @@ class BusABC(metaclass=ABCMeta):
         msgs: Union[Sequence[Message], Message],
         period: float,
         duration: Optional[float] = None,
-        autostart: bool = True,
         modifier_callback: Optional[Callable[[Message], None]] = None,
     ) -> can.broadcastmanager.CyclicSendTaskABC:
         """Default implementation of periodic message sending using threading.
@@ -320,10 +314,6 @@ class BusABC(metaclass=ABCMeta):
         :param duration:
             The duration between sending each message at the given rate. If
             no duration is provided, the task will continue indefinitely.
-        :param autostart:
-            If True (the default) the sending task will immediately start after creation.
-            Otherwise, the task has to be started by calling the
-            tasks :meth:`~can.RestartableCyclicTaskABC.start` method on it.
         :return:
             A started task instance. Note the task can be stopped (and
             depending on the backend modified) by calling the
@@ -340,7 +330,7 @@ class BusABC(metaclass=ABCMeta):
             messages=msgs,
             period=period,
             duration=duration,
-            autostart=autostart,
+			autostart=autostart,
             modifier_callback=modifier_callback,
         )
         return task
@@ -544,7 +534,33 @@ class BusABC(metaclass=ABCMeta):
 
     def fileno(self) -> int:
         raise NotImplementedError("fileno is not implemented using current CAN bus")
-
+    def strToMessage(self,msgstr: str)-> Message:
+       
+        #res=json.loads(s)
+        fields=msgstr.split(":")
+        ts=fields[1].split(" ")
+        ts=ts[1].strip()
+        p=fields[2].split()
+        id=p[0].strip()
+        id="0x"+id
+        if p[1].strip()=="X":
+            isext=True
+        else:
+            isext=False
+        is_rx=True
+        fields[3].strip()
+        data=fields[3].split()
+        dlc= int(data.pop(0))
+        data[-1]=data[-1][:-1]
+        if len(data)>dlc: 
+            data.pop(len(data)-1)
+        data= [int(n,16) for n in data]
+      
+        msg = can.Message(
+                timestamp=float(ts),arbitration_id=int(id,16), data=data, is_extended_id=isext,is_rx=is_rx
+            )
+        return msg
+        
 
 class _SelfRemovingCyclicTask(CyclicSendTaskABC, ABC):
     """Removes itself from a bus.
@@ -554,3 +570,10 @@ class _SelfRemovingCyclicTask(CyclicSendTaskABC, ABC):
 
     def stop(self, remove_task: bool = True) -> None:
         raise NotImplementedError()
+    
+    
+class CustomEncoder(json.JSONEncoder):
+
+    def default(self, o: Any) -> Any:
+        # Encode differently for different types
+        return str(o) if isinstance(o, Message) else super().default(o)
