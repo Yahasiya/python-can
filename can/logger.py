@@ -56,9 +56,9 @@ def _create_base_argument_parser(parser: argparse.ArgumentParser) -> None:
         "--data_bitrate",
         type=int,
         help="Bitrate to use for the data phase in case of CAN-FD.",
-    )
-
-    parser.add_argument(
+	)
+	
+	parser.add_argument(
         "--timing",
         action=_BitTimingAction,
         nargs=argparse.ONE_OR_MORE,
@@ -122,7 +122,7 @@ def _create_bus(parsed_args: argparse.Namespace, **kwargs: Any) -> can.BusABC:
         config["data_bitrate"] = parsed_args.data_bitrate
     if getattr(parsed_args, "can_filters", None):
         config["can_filters"] = parsed_args.can_filters
-    if parsed_args.timing:
+	if parsed_args.timing:
         config["timing"] = parsed_args.timing
 
     return Bus(parsed_args.channel, **config)
@@ -186,8 +186,6 @@ class _BitTimingAction(argparse.Action):
 
         setattr(namespace, self.dest, timing)
         print(timing)
-
-
 def _parse_additional_config(unknown_args: Sequence[str]) -> TAdditionalCliArgs:
     for arg in unknown_args:
         if not re.match(r"^--[a-zA-Z][a-zA-Z0-9\-]*=\S*?$", arg):
