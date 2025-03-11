@@ -79,6 +79,7 @@ Features
 - efficient in-kernel or in-hardware filtering of messages on supported interfaces
 - bus configuration reading from a file or from environment variables
 - command line tools for working with CAN buses (see the `docs <https://python-can.readthedocs.io/en/stable/scripts.html>`__)
+- support interpocess communication via rabitmq server
 - more
 
 
