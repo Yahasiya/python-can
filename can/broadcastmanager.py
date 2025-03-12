@@ -182,7 +182,7 @@ class LimitedDurationCyclicSendTaskABC(CyclicSendTaskABC, abc.ABC):
         """
         super().__init__(messages, period)
         self.duration = duration
-		self.end_time: Optional[float] = None
+        self.end_time: Optional[float] = None
 
 
 class RestartableCyclicTaskABC(CyclicSendTaskABC, abc.ABC):
@@ -277,6 +277,7 @@ class ThreadBasedCyclicSendTask(
         period: float,
         duration: Optional[float] = None,
         on_error: Optional[Callable[[Exception], bool]] = None,
+        autostart: bool = True,
         modifier_callback: Optional[Callable[[Message], None]] = None,
     ) -> None:
         """Transmits `messages` with a `period` seconds for `duration` seconds on a `bus`.
@@ -320,11 +321,9 @@ class ThreadBasedCyclicSendTask(
                 f"{self.__class__.__name__} may achieve better timing accuracy "
                 f"if the 'pywin32' package is installed.",
                 RuntimeWarning,
-                stacklevel=1,
-            )
-
-	    if autostart:
-	        self.start()
+                stacklevel=1,)
+        if autostart:
+            self.start()
 
     def stop(self) -> None:
         self.stopped = True
@@ -338,9 +337,7 @@ class ThreadBasedCyclicSendTask(
             name = f"Cyclic send task for 0x{self.messages[0].arbitration_id:X}"
             self.thread = threading.Thread(target=self._run, name=name)
             self.thread.daemon = True
-			self.end_time: Optional[float] = (
-                time.perf_counter() + self.duration if self.duration else None
-            )
+            self.end_time: Optional[float] = (time.perf_counter() + self.duration if self.duration else None)
 
             if self.event and PYWIN32:
                 PYWIN32.set_timer(self.event, self.period_ms)
@@ -357,7 +354,7 @@ class ThreadBasedCyclicSendTask(
 
         while not self.stopped:
             if self.end_time is not None and time.perf_counter() >= self.end_time:
-				self.stop()
+                self.stop()
                 break
 
             try:
