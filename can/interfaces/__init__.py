@@ -1,133 +1,73 @@
 """
-The ``can`` package provides controller area network support for
-Python developers; providing common abstractions to
-different hardware devices, and a suite of utilities for sending and receiving
-messages on a can bus.
+Interfaces contain low level implementations that interact with CAN hardware.
 """
 
-import contextlib
-import logging
-from importlib.metadata import PackageNotFoundError, version
-from typing import Any, Dict
+from typing import Dict, Tuple
+
+from can._entry_points import read_entry_points
 
 __all__ = [
-    "ASCReader",
-    "ASCWriter",
-    "AsyncBufferedReader",
-    "BitTiming",
-    "BitTimingFd",
-    "BLFReader",
-    "BLFWriter",
-    "BufferedReader",
-    "Bus",
-    "BusABC",
-    "BusState",
-    "CanError",
-    "CanInitializationError",
-    "CanInterfaceNotImplementedError",
-    "CanOperationError",
-    "CanProtocol",
-    "CanTimeoutError",
-    "CanutilsLogReader",
-    "CanutilsLogWriter",
-    "CSVReader",
-    "CSVWriter",
-    "CyclicSendTaskABC",
-    "LimitedDurationCyclicSendTaskABC",
-    "Listener",
-    "Logger",
-    "LogReader",
-    "ModifiableCyclicTaskABC",
-    "Message",
-    "MessageSync",
-    "MF4Reader",
-    "MF4Writer",
-    "Notifier",
-    "Printer",
-    "RedirectReader",
-    "RestartableCyclicTaskABC",
-    "SizedRotatingLogger",
-    "SqliteReader",
-    "SqliteWriter",
-    "ThreadSafeBus",
-    "TRCFileVersion",
-    "TRCReader",
-    "TRCWriter",
+    "BACKENDS",
     "VALID_INTERFACES",
-    "bit_timing",
-    "broadcastmanager",
-    "bus",
-    "ctypesutil",
-    "detect_available_configs",
-    "exceptions",
-    "interface",
-    "interfaces",
-    "io",
-    "listener",
-    "logconvert",
-    "log",
-    "logger",
-    "message",
-    "notifier",
-    "player",
-    "set_logging_level",
-    "thread_safe_bus",
-    "typechecking",
-    "util",
-    "viewer",
+    "canalystii",
+    "cantact",
+    "etas",
+    "gs_usb",
+    "ics_neovi",
+    "iscan",
+    "ixxat",
+    "kvaser",
+    "neousys",
+    "nican",
+    "nixnet",
+    "pcan",
+    "robotell",
+    "seeedstudio",
+    "serial",
+    "slcan",
+    "socketcan",
+    "socketcand",
+    "systec",
+    "udp_multicast",
+    "usb2can",
+    "vector",
+    "virtual",
 ]
 
-from . import typechecking  # isort:skip
-from . import util  # isort:skip
-from . import broadcastmanager, interface
-from .bit_timing import BitTiming, BitTimingFd
-from .broadcastmanager import (
-    CyclicSendTaskABC,
-    LimitedDurationCyclicSendTaskABC,
-    ModifiableCyclicTaskABC,
-    RestartableCyclicTaskABC,
-)
-from .bus import BusABC, BusState, CanProtocol
-from .exceptions import (
-    CanError,
-    CanInitializationError,
-    CanInterfaceNotImplementedError,
-    CanOperationError,
-    CanTimeoutError,
-)
-from .interface import Bus, detect_available_configs
-from .interfaces import VALID_INTERFACES
-from .io import (
-    ASCReader,
-    ASCWriter,
-    BLFReader,
-    BLFWriter,
-    CanutilsLogReader,
-    CanutilsLogWriter,
-    CSVReader,
-    CSVWriter,
-    Logger,
-    LogReader,
-    MessageSync,
-    MF4Reader,
-    MF4Writer,
-    Printer,
-    SizedRotatingLogger,
-    SqliteReader,
-    SqliteWriter,
-    TRCFileVersion,
-    TRCReader,
-    TRCWriter,
-)
-from .listener import AsyncBufferedReader, BufferedReader, Listener, RedirectReader
-from .message import Message
-from .notifier import Notifier
-from .thread_safe_bus import ThreadSafeBus
-from .util import set_logging_level
+# interface_name => (module, classname)
+BACKENDS: Dict[str, Tuple[str, str]] = {
+    "kvaser": ("can.interfaces.kvaser", "KvaserBus"),
+    "socketcan": ("can.interfaces.socketcan", "SocketcanBus"),
+    "serial": ("can.interfaces.serial.serial_can", "SerialBus"),
+    "pcan": ("can.interfaces.pcan", "PcanBus"),
+    "usb2can": ("can.interfaces.usb2can", "Usb2canBus"),
+    "ixxat": ("can.interfaces.ixxat", "IXXATBus"),
+    "nican": ("can.interfaces.nican", "NicanBus"),
+    "iscan": ("can.interfaces.iscan", "IscanBus"),
+    "virtual": ("can.interfaces.virtual", "VirtualBus"),
+    "udp_multicast": ("can.interfaces.udp_multicast", "UdpMulticastBus"),
+    "neovi": ("can.interfaces.ics_neovi", "NeoViBus"),
+    "vector": ("can.interfaces.vector", "VectorBus"),
+    "slcan": ("can.interfaces.slcan", "slcanBus"),
+    "robotell": ("can.interfaces.robotell", "robotellBus"),
+    "canalystii": ("can.interfaces.canalystii", "CANalystIIBus"),
+    "systec": ("can.interfaces.systec", "UcanBus"),
+    "seeedstudio": ("can.interfaces.seeedstudio", "SeeedBus"),
+    "cantact": ("can.interfaces.cantact", "CantactBus"),
+    "gs_usb": ("can.interfaces.gs_usb", "GsUsbBus"),
+    "nixnet": ("can.interfaces.nixnet", "NiXNETcanBus"),
+    "neousys": ("can.interfaces.neousys", "NeousysBus"),
+    "etas": ("can.interfaces.etas", "EtasBus"),
+    "socketcand": ("can.interfaces.socketcand", "SocketCanDaemonBus"),
+    "rabbitmq": ("can.interfaces.rabbitmq", "RabbitmqBus")
+}
 
-with contextlib.suppress(PackageNotFoundError):
-    __version__ = version("python-can")
 
-log = logging.getLogger("can")
+BACKENDS.update(
+    {
+        interface.key: (interface.module_name, interface.class_name)
+        for interface in read_entry_points(group="can.interface")
+    }
+)
 
-rc: Dict[str, Any] = {}
+VALID_INTERFACES = frozenset(sorted(BACKENDS.keys()))
