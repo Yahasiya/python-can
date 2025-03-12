@@ -540,6 +540,8 @@ class BusABC(metaclass=ABCMeta):
        
         #res=json.loads(s)
         fields=msgstr.split(":")
+        fields[-1]=fields[-1][:-1].strip()
+        ch=fields[-1]
         ts=fields[1].split(" ")
         ts=ts[1].strip()
         p=fields[2].split()
@@ -553,14 +555,15 @@ class BusABC(metaclass=ABCMeta):
         fields[3].strip()
         data=fields[3].split()
         dlc= int(data.pop(0))
-        data[-1]=data[-1][:-1]
+        data.pop()
         if len(data)>dlc: 
             data.pop(len(data)-1)
         data= [int(n,16) for n in data]
       
         msg = can.Message(
-                timestamp=float(ts),arbitration_id=int(id,16), data=data, is_extended_id=isext,is_rx=is_rx
+                timestamp=float(ts),arbitration_id=int(id,16), data=data, is_extended_id=isext,is_rx=is_rx,channel=ch
             )
+        
         return msg
         
 
