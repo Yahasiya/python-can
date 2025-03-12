@@ -57,8 +57,8 @@ def _create_base_argument_parser(parser: argparse.ArgumentParser) -> None:
         type=int,
         help="Bitrate to use for the data phase in case of CAN-FD.",
 	)
-	
-	parser.add_argument(
+    
+    parser.add_argument(
         "--timing",
         action=_BitTimingAction,
         nargs=argparse.ONE_OR_MORE,
@@ -68,8 +68,7 @@ def _create_base_argument_parser(parser: argparse.ArgumentParser) -> None:
         "data_tseg1=29 data_tseg2=10 data_sjw=10 data_brp=1` for CAN FD. "
         "Check the python-can documentation to verify whether your "
         "CAN interface supports the `timing` argument.",
-        metavar="TIMING_ARG",
-    )
+        metavar="TIMING_ARG",)
 
     parser.add_argument(
         "extra_args",
@@ -122,7 +121,7 @@ def _create_bus(parsed_args: argparse.Namespace, **kwargs: Any) -> can.BusABC:
         config["data_bitrate"] = parsed_args.data_bitrate
     if getattr(parsed_args, "can_filters", None):
         config["can_filters"] = parsed_args.can_filters
-	if parsed_args.timing:
+    if parsed_args.timing:
         config["timing"] = parsed_args.timing
 
     return Bus(parsed_args.channel, **config)
