@@ -538,28 +538,35 @@ class BusABC(metaclass=ABCMeta):
         raise NotImplementedError("fileno is not implemented using current CAN bus")
     def strToMessage(self,msgstr: str)-> Message:
        
-        #res=json.loads(s)
-        fields=msgstr.split(":")
-        fields[-1]=fields[-1][:-1].strip()
-        ch=fields[-1]
-        ts=fields[1].split(" ")
-        ts=ts[1].strip()
-        p=fields[2].split()
-        id=p[0].strip()
-        id="0x"+id
-        if p[1].strip()=="X":
+        a=msgstr.find("Timestamp:")
+        b=msgstr.find("ID:")
+        c=msgstr.find("DL:")
+        d=msgstr.find("Channel:")
+        
+        ts=msgstr[a+10:b-1].strip()
+        temp=msgstr[b+3:c-1].strip()
+        fields=temp.split(" ")
+        id=fields.pop(0)
+        fields.pop()
+        
+        if fields.pop()=="X":
             isext=True
         else:
             isext=False
+            
         is_rx=True
-        fields[3].strip()
-        data=fields[3].split()
-        dlc= int(data.pop(0))
-        data.pop()
-        if len(data)>dlc: 
-            data.pop(len(data)-1)
-        data= [int(n,16) for n in data]
-      
+        data=msgstr[c+3:d-1].strip()
+        data=data.split(" ")  
+        dlc= int(data.pop(0).strip())
+        data.pop(0)
+        data.pop(0)
+        data.pop(0)
+        buf=[]
+        for index in range(0,dlc):
+            buf.append(data.pop(0))
+        
+        data= [int(n,16) for n in buf]
+        ch=msgstr[d+8:len(msgstr)-1].strip()
         msg = can.Message(
                 timestamp=float(ts),arbitration_id=int(id,16), data=data, is_extended_id=isext,is_rx=is_rx,channel=ch
             )
